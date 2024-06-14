@@ -1,12 +1,15 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 
 namespace ValueTypes;
 
 [StructLayout(LayoutKind.Auto)]
 [Serializable]
-public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email>
+public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email>, ISerializable
 {
+    private const string EmailField = "email";
+
     public static readonly Email Empty = new();
 
     private readonly string _v;
@@ -20,6 +23,38 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
             throw new ArgumentNullException(nameof(v));
 
         _v = v;
+    }
+
+    private Email(SerializationInfo info, StreamingContext context)
+    {
+        ArgumentNullException.ThrowIfNull(info);
+
+        bool foundEmailData = false;
+        string serializedEmail = "";
+
+        SerializationInfoEnumerator enumerator = info.GetEnumerator();
+        while (enumerator.MoveNext())
+        {
+            switch (enumerator.Name)
+            {
+                case EmailField:
+                    serializedEmail = enumerator.Value?.ToString() ?? "";
+                    foundEmailData = true;
+                    break;
+                default:
+                    // Ignore other fields for forward compatability.
+                    break;
+            }
+        }
+
+        if (foundEmailData)
+        {
+            _v = serializedEmail;
+        }
+        else
+        {
+            throw new SerializationException("Missing email data.");
+        }
     }
 
     public int CompareTo(object? obj)
@@ -45,7 +80,7 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        if (obj == null)
+        if (obj is null)
             return false;
 
         if (obj is not Email email)
@@ -57,6 +92,13 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
     public bool Equals(Email other)
     {
         return string.Compare(_v, other._v, true) == 0;
+    }
+
+    public void GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        ArgumentNullException.ThrowIfNull(info);
+
+        info.AddValue(EmailField, _v);
     }
 
     public static bool operator ==(Email left, Email right)
