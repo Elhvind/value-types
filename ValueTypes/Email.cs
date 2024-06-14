@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
@@ -22,7 +23,7 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
         if (!v.Contains('@'))
             throw new ArgumentNullException(nameof(v));
 
-        _v = v;
+        _v = v.ToLower(CultureInfo.InvariantCulture);
     }
 
     private Email(SerializationInfo info, StreamingContext context)
@@ -49,7 +50,7 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
 
         if (foundEmailData)
         {
-            _v = serializedEmail;
+            this = new Email(serializedEmail);
         }
         else
         {
@@ -129,5 +130,10 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
     public static bool operator >=(Email left, Email right)
     {
         return left.CompareTo(right) >= 0;
+    }
+
+    public override string ToString()
+    {
+        return _v;
     }
 }
