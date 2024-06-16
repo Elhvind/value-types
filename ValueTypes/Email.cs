@@ -2,58 +2,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ValueTypes;
-
-public sealed class EmailTypeConverter : TypeConverter
-{
-    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
-    {
-        if (sourceType == typeof(string))
-        {
-            return true;
-        }
-        if (sourceType == typeof(Email))
-        {
-            return true;
-        }
-        return base.CanConvertFrom(context, sourceType);
-    }
-
-    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
-    {
-        if (value is string strValue)
-        {
-            return new Email(strValue);
-        }
-        return base.ConvertFrom(context, culture, value);
-    }
-}
-
-public sealed class EmailJsonConverter : JsonConverter<Email>
-{
-    public override void Write(Utf8JsonWriter writer, Email value, JsonSerializerOptions options)
-    {
-        writer.WriteStringValue(value.ToString());
-    }
-
-    public override Email Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType == JsonTokenType.String)
-        {
-            return new Email(reader.GetString());
-        }
-
-        return Email.Empty;
-    }
-
-    public override bool CanConvert(Type typeToConvert)
-    {
-        return typeToConvert == typeof(Email);
-    }
-}
 
 [StructLayout(LayoutKind.Auto)]
 [Serializable]
@@ -74,6 +25,16 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
             throw new ArgumentNullException(nameof(v));
 
         _v = v.ToLower(CultureInfo.InvariantCulture);
+    }
+
+    public static Guid Parse(string? input)
+    {
+        throw new NotImplementedException();
+    }
+
+    public static bool TryParse([NotNullWhen(true)] string? input, out Email result)
+    {
+        throw new NotImplementedException();
     }
 
     public int CompareTo(object? obj)
