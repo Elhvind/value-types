@@ -1,16 +1,66 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ValueTypes;
 
+public sealed class EmailTypeConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+    {
+        if (sourceType == typeof(string))
+        {
+            return true;
+        }
+        if (sourceType == typeof(Email))
+        {
+            return true;
+        }
+        return base.CanConvertFrom(context, sourceType);
+    }
+
+    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
+    {
+        if (value is string strValue)
+        {
+            return new Email(strValue);
+        }
+        return base.ConvertFrom(context, culture, value);
+    }
+}
+
+public sealed class EmailJsonConverter : JsonConverter<Email>
+{
+    public override void Write(Utf8JsonWriter writer, Email value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString());
+    }
+
+    public override Email Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            return new Email(reader.GetString());
+        }
+
+        return Email.Empty;
+    }
+
+    public override bool CanConvert(Type typeToConvert)
+    {
+        return typeToConvert == typeof(Email);
+    }
+}
+
 [StructLayout(LayoutKind.Auto)]
 [Serializable]
-public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email>, ISerializable
+[TypeConverter(typeof(EmailTypeConverter))]
+[JsonConverter(typeof(EmailJsonConverter))]
+public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email>
 {
-    private const string EmailField = "email";
-
     public static readonly Email Empty = new();
 
     private readonly string _v;
@@ -24,38 +74,6 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
             throw new ArgumentNullException(nameof(v));
 
         _v = v.ToLower(CultureInfo.InvariantCulture);
-    }
-
-    private Email(SerializationInfo info, StreamingContext context)
-    {
-        ArgumentNullException.ThrowIfNull(info);
-
-        bool foundEmailData = false;
-        string serializedEmail = "";
-
-        SerializationInfoEnumerator enumerator = info.GetEnumerator();
-        while (enumerator.MoveNext())
-        {
-            switch (enumerator.Name)
-            {
-                case EmailField:
-                    serializedEmail = enumerator.Value?.ToString() ?? "";
-                    foundEmailData = true;
-                    break;
-                default:
-                    // Ignore other fields for forward compatability.
-                    break;
-            }
-        }
-
-        if (foundEmailData)
-        {
-            this = new Email(serializedEmail);
-        }
-        else
-        {
-            throw new SerializationException("Missing email data.");
-        }
     }
 
     public int CompareTo(object? obj)
@@ -93,13 +111,6 @@ public readonly struct Email : IComparable, IComparable<Email>, IEquatable<Email
     public bool Equals(Email other)
     {
         return string.Compare(_v, other._v, true) == 0;
-    }
-
-    public void GetObjectData(SerializationInfo info, StreamingContext context)
-    {
-        ArgumentNullException.ThrowIfNull(info);
-
-        info.AddValue(EmailField, _v);
     }
 
     public static bool operator ==(Email left, Email right)
